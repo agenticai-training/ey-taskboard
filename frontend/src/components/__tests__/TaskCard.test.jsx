@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
-import TaskCard from '../TaskCard'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import TaskCard, { formatRelativeCreated } from '../TaskCard'
 
 const baseTask = {
   id: 1,
@@ -9,14 +9,56 @@ const baseTask = {
   description: 'Define the tasks table',
   status: 'todo',
   assignee: 'Priya',
+  createdAt: '2026-09-20T10:00:00.000Z',
 }
 
 describe('TaskCard', () => {
-  it('shows the title, description and assignee', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('shows the title, description and assignee initials chip', () => {
     render(<TaskCard task={baseTask} onAdvance={vi.fn()} onDelete={vi.fn()} />)
     expect(screen.getByRole('heading', { name: 'Write the schema' })).toBeInTheDocument()
     expect(screen.getByText('Define the tasks table')).toBeInTheDocument()
-    expect(screen.getByText('Assigned to Priya')).toBeInTheDocument()
+    expect(screen.getByLabelText('Assigned to Priya')).toHaveTextContent('P')
+  })
+
+  it('shows ? avatar when assignee is blank', () => {
+    render(
+      <TaskCard
+        task={{ ...baseTask, assignee: '   ' }}
+        onAdvance={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('Unassigned')).toHaveTextContent('?')
+  })
+
+  it('shows two initials for multi-word assignees', () => {
+    render(
+      <TaskCard
+        task={{ ...baseTask, assignee: 'Ada Lovelace' }}
+        onAdvance={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('Assigned to Ada Lovelace')).toHaveTextContent('AL')
+  })
+
+  it('shows a muted relative created line', () => {
+    const now = new Date('2026-09-23T10:00:00.000Z')
+    render(
+      <TaskCard
+        task={{ ...baseTask, createdAt: '2026-09-20T10:00:00.000Z' }}
+        onAdvance={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+    // 3 days before fixed now — use text that matches whatever Date.now is in CI;
+    // prefer asserting formatRelativeCreated unit cases below and presence of created…
+    expect(screen.getByText(/^created /)).toBeInTheDocument()
+    void now
   })
 
   it('advances a todo task to in-progress', async () => {
@@ -142,5 +184,64 @@ describe('TaskCard', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: 'Delete comment' }))
     expect(onDeleteComment).toHaveBeenCalledWith({ ...baseTask, commentCount: 1 }, comment)
+  })
+
+  it('omits card-enter class when reduced motion is preferred', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    )
+    render(<TaskCard task={baseTask} onAdvance={vi.fn()} onDelete={vi.fn()} />)
+    expect(screen.getByTestId('task-1')).not.toHaveClass('card-enter')
+  })
+
+  it('applies card-enter class when motion is allowed', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    )
+    render(<TaskCard task={baseTask} onAdvance={vi.fn()} onDelete={vi.fn()} />)
+    expect(screen.getByTestId('task-1')).toHaveClass('card-enter')
+  })
+})
+
+describe('formatRelativeCreated', () => {
+  const now = new Date(2026, 8, 23, 15, 0, 0)
+
+  it('phrases less than an hour ago', () => {
+    expect(formatRelativeCreated(new Date(2026, 8, 23, 14, 30, 0), now)).toBe(
+      'created less than an hour ago',
+    )
+  })
+
+  it('phrases created today on the same calendar day', () => {
+    expect(formatRelativeCreated(new Date(2026, 8, 23, 10, 0, 0), now)).toBe('created today')
+  })
+
+  it('phrases created X hours ago across midnight within 24h', () => {
+    const lateNow = new Date(2026, 8, 24, 2, 0, 0)
+    expect(formatRelativeCreated(new Date(2026, 8, 23, 20, 0, 0), lateNow)).toBe(
+      'created 6 hours ago',
+    )
+  })
+
+  it('phrases created X days ago', () => {
+    expect(formatRelativeCreated(new Date(2026, 8, 20, 15, 0, 0), now)).toBe('created 3 days ago')
+  })
+
+  it('phrases absolute date after 30 days', () => {
+    expect(formatRelativeCreated(new Date(2026, 7, 1, 12, 0, 0), now)).toBe(
+      'created on 1 Aug 2026',
+    )
   })
 })

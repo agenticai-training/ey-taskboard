@@ -14,6 +14,26 @@ function withCount(task, count) {
   return { ...task, commentCount: count, comment_count: count }
 }
 
+function BoardSkeleton() {
+  return (
+    <div
+      className="board-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading tasks"
+    >
+      {[0, 1, 2].map((i) => (
+        <div className="skeleton-column" key={i}>
+          <div className="skeleton-bar short" />
+          <div className="skeleton-card" />
+          <div className="skeleton-card" />
+        </div>
+      ))}
+      <span className="visually-hidden">Loading…</span>
+    </div>
+  )
+}
+
 // Container component: owns the task list state and all data fetching.
 export default function BoardPage() {
   const [tasks, setTasks] = useState([])
@@ -114,18 +134,21 @@ export default function BoardPage() {
     <div className="app">
       <header className="app-header">
         <h1>Engineering Task Board</h1>
-        <span className="assignee">Module 01 — AI Champions Programme</span>
+        <p className="app-context">Track work across To Do, In Progress, and Done</p>
       </header>
 
-      <TaskForm onCreate={handleCreate} />
+      <details className="create-panel">
+        <summary>Add a new task</summary>
+        <TaskForm onCreate={handleCreate} />
+      </details>
 
       <div className="toolbar">
         <StatusFilter value={filter} onChange={setFilter} />
-        <button onClick={refresh}>Refresh</button>
+        <button type="button" onClick={refresh}>Refresh</button>
       </div>
 
       {error && <p className="error">{error}</p>}
-      {loading ? <p>Loading…</p> : (
+      {loading ? <BoardSkeleton /> : (
         <TaskList
           tasks={tasks}
           filter={filter}

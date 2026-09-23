@@ -1,8 +1,14 @@
 # Agent Instructions
 
-The authoritative engineering rules for this repository are in
-[`.github/copilot-instructions.md`](.github/copilot-instructions.md).
-Read that file first and follow it exactly.
+Cursor rules in [`.cursor/rules/`](.cursor/rules/) are the agent equivalent of the GitHub Copilot instructions. Follow the rules.
+
+| Cursor rule | Copilot source | Applies |
+| --- | --- | --- |
+| [`.cursor/rules/engineering.mdc`](.cursor/rules/engineering.mdc) | [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Every session |
+| [`.cursor/rules/frontend.mdc`](.cursor/rules/frontend.mdc) | [`.github/instructions/frontend.instructions.md`](.github/instructions/frontend.instructions.md) | `frontend/**` |
+| [`.cursor/rules/tests.mdc`](.cursor/rules/tests.mdc) | [`.github/instructions/tests.instructions.md`](.github/instructions/tests.instructions.md) | Test files |
+
+When a Copilot instruction changes, update the matching Cursor rule in the same change.
 
 ## Quick reference
 - Three layers: Controller/Router → Service → Repository. No layer-skipping.

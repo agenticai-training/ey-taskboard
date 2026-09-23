@@ -1,0 +1,45 @@
+---
+description: Task board engineering rules — layers, schema, error contract, and how to verify
+alwaysApply: true
+---
+
+# Engineering Task Board
+
+Kanban board: PostgreSQL + a React frontend + one backend (.NET, Python, or Java) behind a shared REST contract.
+
+## Layers
+
+| Layer | Allowed | Never |
+| --- | --- | --- |
+| Controller / Router | HTTP ↔ domain, map errors to status codes | Business rules, SQL |
+| Service | Validation, business rules | HTTP, SQL |
+| Repository | All database access | Validation, HTTP |
+
+Frontend: `components/` (presentational) → `pages/` (state + fetching) → `services/` (all HTTP).
+
+```text
+BAD:  controller runs SQL or checks a business rule
+GOOD: controller calls the service; the service calls the repository
+```
+
+## Hard rules
+
+- Do not read `.env`, `.env.local`, or any other `.env.*` file except `.env.example`. Do not read environment variables, API keys, or secrets directly. Use the framework configuration system.
+- Schema is owned once, in `database/schema.sql`. Do not add EF migrations, `Base.metadata.create_all()`, or `ddl-auto` values other than `none`.
+- `created_at` / `updated_at` are set by the database, never by the client.
+- `status` is exactly one of: `todo`, `in-progress`, `done`.
+- `404` for a missing id. `422` for a missing title or an unknown status. Do not invent other codes.
+- Any new endpoint gets a test in the same layer before the implementation is considered done.
+
+## Conventions
+
+- Match the existing style of the file you are editing. Do not reformat untouched lines.
+- Keep the three backends behaviourally identical, with the same request/response shape.
+- Prefer editing an existing file over creating a new one.
+
+## Verify
+
+- .NET: `dotnet test` in `backend-dotnet/`
+- Python: `pytest` in `backend-python/`
+- Java: `./mvnw -B test` in `backend-java/`
+- Frontend: `npm test -- --run` in `frontend/`
