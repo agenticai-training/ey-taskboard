@@ -34,7 +34,7 @@ manual a11y / contrast checks for EYTB-1.
 
 | Element | Contract |
 |---------|----------|
-| Header | Product name, one-line context, refresh grouped with toolbar sensibly |
+| Header | Product name, one-line context, and refresh in one header group |
 | New-task panel | Collapsible; default collapsed; same fields and submit rules as today |
 | Loading | Skeleton or spinner (not a blank board) while `loading` |
 | Empty column | Text `No tasks yet` |

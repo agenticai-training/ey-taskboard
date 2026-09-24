@@ -115,7 +115,7 @@ description: "Task list for Board UI Refresh (EYTB-1)"
 ### Implementation for User Story 3
 
 - [X] T025 [US3] When a column count is 0, render friendly empty copy exactly `No tasks yet` inside that column in `frontend/src/components/TaskList.jsx` (no whole-board empty banner; three messages if board fully empty)
-- [X] T026 [US3] Polish page header in `frontend/src/pages/BoardPage.jsx` + `frontend/src/index.css`: product name, one-line context string, refresh grouped sensibly with toolbar; keep `h1` semantics
+- [X] T026 [US3] Polish page header in `frontend/src/pages/BoardPage.jsx` + `frontend/src/index.css`: product name, one-line context string, and refresh in one header group; keep `h1` semantics
 - [X] T027 [US3] Wrap existing `TaskForm` in a collapsible panel on `frontend/src/pages/BoardPage.jsx` (`<details>`/`<summary>` or button + `aria-expanded`); default **collapsed**; do not persist open state across visits; no new fields
 - [X] T028 [US3] Adjust `frontend/src/components/TaskForm.jsx` markup/classes only as needed for panel styling; keep create fields, validation, and `onCreate` behaviour identical
 - [X] T029 [US3] Replace plain loading text with board-shaped skeleton (preferred) or accessible spinner (`role="status"` / `aria-busy`) while loading in `frontend/src/pages/BoardPage.jsx` + `frontend/src/index.css`

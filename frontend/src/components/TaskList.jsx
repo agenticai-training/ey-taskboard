@@ -14,6 +14,7 @@ export default function TaskList({
   onPostComment,
   onDeleteComment,
   commentError,
+  enteringTaskId = null,
 }) {
   const visibleTasks =
     filter === 'all' ? tasks : tasks.filter((t) => t.status === filter)
@@ -49,6 +50,7 @@ export default function TaskList({
                 onPostComment={onPostComment}
                 onDeleteComment={onDeleteComment}
                 commentError={expandedTaskId === task.id ? commentError : null}
+                animateEnter={enteringTaskId != null && task.id === enteringTaskId}
               />
             ))}
           </section>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import BoardPage from '../../pages/BoardPage'
@@ -28,6 +28,9 @@ describe('BoardPage create panel', () => {
     })
     const details = screen.getByText('Add a new task').closest('details')
     expect(details.open).toBe(false)
+    const header = screen.getByRole('banner')
+    expect(within(header).getByRole('heading', { name: 'Engineering Task Board' })).toBeInTheDocument()
+    expect(within(header).getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
   })
 
   it('lets TaskForm submit after expanding the panel', async () => {
@@ -51,5 +54,35 @@ describe('BoardPage create panel', () => {
         assignee: null,
       })
     })
+  })
+
+  it('animates only the card created in this session', async () => {
+    const existing = { id: 1, title: 'Old task', status: 'todo', assignee: 'Ana' }
+    const created = {
+      id: 9,
+      title: 'Ship UI',
+      status: 'todo',
+      assignee: null,
+      createdAt: '2026-09-24T00:00:00.000Z',
+    }
+    taskService.createTask.mockResolvedValue(created)
+    taskService.listTasks
+      .mockResolvedValueOnce([existing])
+      .mockResolvedValue([existing, created])
+
+    render(<BoardPage />)
+    await waitFor(() => {
+      expect(screen.getByTestId('task-1')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('task-1')).not.toHaveClass('card-enter')
+
+    await userEvent.click(screen.getByText('Add a new task'))
+    await userEvent.type(screen.getByLabelText('Title'), 'Ship UI')
+    await userEvent.click(screen.getByRole('button', { name: 'Add task' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('task-9')).toHaveClass('card-enter')
+    })
+    expect(screen.getByTestId('task-1')).not.toHaveClass('card-enter')
   })
 })

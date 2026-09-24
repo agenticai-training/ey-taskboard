@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import StatusFilter from '../components/StatusFilter'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
+import { STATUS_LABELS } from '../constants'
 import * as taskService from '../services/taskService'
 
 function countOf(task) {
@@ -43,6 +44,13 @@ export default function BoardPage() {
   const [expandedTaskId, setExpandedTaskId] = useState(null)
   const [commentsByTask, setCommentsByTask] = useState({})
   const [commentError, setCommentError] = useState(null)
+  const [enteringTaskId, setEnteringTaskId] = useState(null)
+
+  useEffect(() => {
+    if (loading || enteringTaskId == null) return undefined
+    const timer = setTimeout(() => setEnteringTaskId(null), 300)
+    return () => clearTimeout(timer)
+  }, [loading, enteringTaskId])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -61,7 +69,8 @@ export default function BoardPage() {
   }, [refresh])
 
   async function handleCreate(task) {
-    await taskService.createTask(task)
+    const created = await taskService.createTask(task)
+    setEnteringTaskId(created?.id ?? null)
     await refresh()
   }
 
@@ -133,8 +142,13 @@ export default function BoardPage() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Engineering Task Board</h1>
-        <p className="app-context">Track work across To Do, In Progress, and Done</p>
+        <div className="app-header-text">
+          <h1>Engineering Task Board</h1>
+          <p className="app-context">
+            Track work across {STATUS_LABELS.todo}, {STATUS_LABELS['in-progress']}, and {STATUS_LABELS.done}
+          </p>
+        </div>
+        <button type="button" onClick={refresh}>Refresh</button>
       </header>
 
       <details className="create-panel">
@@ -144,7 +158,6 @@ export default function BoardPage() {
 
       <div className="toolbar">
         <StatusFilter value={filter} onChange={setFilter} />
-        <button type="button" onClick={refresh}>Refresh</button>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -160,6 +173,7 @@ export default function BoardPage() {
           onPostComment={handlePostComment}
           onDeleteComment={handleDeleteComment}
           commentError={commentError}
+          enteringTaskId={enteringTaskId}
         />
       )}
     </div>

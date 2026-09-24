@@ -15,6 +15,7 @@ const baseTask = {
 describe('TaskCard', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('shows the title, description and assignee initials chip', () => {
@@ -47,7 +48,8 @@ describe('TaskCard', () => {
   })
 
   it('shows a muted relative created line', () => {
-    const now = new Date('2026-09-23T10:00:00.000Z')
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-23T10:00:00.000Z'))
     render(
       <TaskCard
         task={{ ...baseTask, createdAt: '2026-09-20T10:00:00.000Z' }}
@@ -55,10 +57,7 @@ describe('TaskCard', () => {
         onDelete={vi.fn()}
       />,
     )
-    // 3 days before fixed now — use text that matches whatever Date.now is in CI;
-    // prefer asserting formatRelativeCreated unit cases below and presence of created…
-    expect(screen.getByText(/^created /)).toBeInTheDocument()
-    void now
+    expect(screen.getByText('created 3 days ago')).toBeInTheDocument()
   })
 
   it('advances a todo task to in-progress', async () => {
@@ -196,11 +195,11 @@ describe('TaskCard', () => {
         removeEventListener: vi.fn(),
       })),
     )
-    render(<TaskCard task={baseTask} onAdvance={vi.fn()} onDelete={vi.fn()} />)
+    render(<TaskCard task={baseTask} animateEnter onAdvance={vi.fn()} onDelete={vi.fn()} />)
     expect(screen.getByTestId('task-1')).not.toHaveClass('card-enter')
   })
 
-  it('applies card-enter class when motion is allowed', () => {
+  it('applies card-enter only when the card is new and motion is allowed', () => {
     vi.stubGlobal(
       'matchMedia',
       vi.fn().mockImplementation((query) => ({
@@ -210,7 +209,9 @@ describe('TaskCard', () => {
         removeEventListener: vi.fn(),
       })),
     )
-    render(<TaskCard task={baseTask} onAdvance={vi.fn()} onDelete={vi.fn()} />)
+    const { rerender } = render(<TaskCard task={baseTask} onAdvance={vi.fn()} onDelete={vi.fn()} />)
+    expect(screen.getByTestId('task-1')).not.toHaveClass('card-enter')
+    rerender(<TaskCard task={baseTask} animateEnter onAdvance={vi.fn()} onDelete={vi.fn()} />)
     expect(screen.getByTestId('task-1')).toHaveClass('card-enter')
   })
 })

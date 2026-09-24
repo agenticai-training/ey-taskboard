@@ -97,6 +97,7 @@ export default function TaskCard({
   onPostComment,
   onDeleteComment,
   commentError,
+  animateEnter = false,
 }) {
   const currentIndex = STATUSES.indexOf(task.status)
   const nextStatus = STATUSES[currentIndex + 1]
@@ -106,7 +107,7 @@ export default function TaskCard({
   const assigneeLabel = task.assignee?.trim()
     ? `Assigned to ${task.assignee.trim()}`
     : 'Unassigned'
-  const enterClass = prefersReducedMotion() ? 'card' : 'card card-enter'
+  const enterClass = animateEnter && !prefersReducedMotion() ? 'card card-enter' : 'card'
 
   function handlePost(event) {
     event.preventDefault()
