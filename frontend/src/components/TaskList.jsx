@@ -1,8 +1,8 @@
-import { STATUSES, STATUS_LABELS } from '../constants'
+import { STATUSES, STATUS_LABELS, STATUS_ACCENT_CLASS } from '../constants'
 import TaskCard from './TaskCard'
 
-// Renders the three Kanban columns. When a status filter is active, only the
-// matching column is shown.
+// Renders the three Kanban columns. Always shows all statuses; the filter only
+// limits which tasks appear in each column (filtered-out columns stay at count 0).
 export default function TaskList({
   tasks,
   filter,
@@ -14,19 +14,30 @@ export default function TaskList({
   onPostComment,
   onDeleteComment,
   commentError,
+  enteringTaskId = null,
 }) {
-  const columns = filter === 'all' ? STATUSES : [filter]
+  const visibleTasks =
+    filter === 'all' ? tasks : tasks.filter((t) => t.status === filter)
 
   return (
     <div className="board">
-      {columns.map((status) => {
-        const columnTasks = tasks.filter((t) => t.status === status)
+      {STATUSES.map((status) => {
+        const columnTasks = visibleTasks.filter((t) => t.status === status)
         return (
-          <section className="column" key={status} aria-label={STATUS_LABELS[status]}>
-            <h2>
-              {STATUS_LABELS[status]} ({columnTasks.length})
-            </h2>
-            {columnTasks.length === 0 && <p className="assignee">No tasks</p>}
+          <section
+            className={`column ${STATUS_ACCENT_CLASS[status]}`}
+            key={status}
+            aria-label={STATUS_LABELS[status]}
+          >
+            <div className="column-header">
+              <h2>{STATUS_LABELS[status]}</h2>
+              <span className="column-count" aria-label={`${columnTasks.length} tasks`}>
+                {columnTasks.length}
+              </span>
+            </div>
+            {columnTasks.length === 0 && (
+              <p className="column-empty">No tasks yet</p>
+            )}
             {columnTasks.map((task) => (
               <TaskCard
                 key={task.id}
@@ -39,6 +50,7 @@ export default function TaskList({
                 onPostComment={onPostComment}
                 onDeleteComment={onDeleteComment}
                 commentError={expandedTaskId === task.id ? commentError : null}
+                animateEnter={enteringTaskId != null && task.id === enteringTaskId}
               />
             ))}
           </section>

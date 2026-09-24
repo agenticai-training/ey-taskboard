@@ -10,6 +10,10 @@ function createdAtOf(comment) {
   return comment.createdAt || comment.created_at
 }
 
+function taskCreatedAt(task) {
+  return task.createdAt || task.created_at
+}
+
 export function formatApproximateTime(iso, now = new Date()) {
   if (!iso) return ''
   const then = new Date(iso)
@@ -24,6 +28,63 @@ export function formatApproximateTime(iso, now = new Date()) {
   return then.toLocaleDateString()
 }
 
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+
+/** Relative “created …” phrasing for task cards (comments keep formatApproximateTime). */
+export function formatRelativeCreated(iso, now = new Date()) {
+  if (!iso) return ''
+  const then = new Date(iso)
+  if (Number.isNaN(then.getTime())) return ''
+
+  const deltaMs = Math.max(0, now.getTime() - then.getTime())
+  const deltaMin = Math.floor(deltaMs / 60000)
+
+  if (deltaMin < 60) return 'created less than an hour ago'
+
+  const sameCalendarDay =
+    then.getFullYear() === now.getFullYear() &&
+    then.getMonth() === now.getMonth() &&
+    then.getDate() === now.getDate()
+
+  const deltaHours = Math.floor(deltaMs / 3600000)
+  const deltaDays = Math.floor(deltaMs / 86400000)
+
+  if (deltaDays < 1) {
+    if (sameCalendarDay) return 'created today'
+    const hours = Math.max(1, deltaHours)
+    return hours === 1 ? 'created 1 hour ago' : `created ${hours} hours ago`
+  }
+
+  if (deltaDays <= 30) {
+    return deltaDays === 1 ? 'created 1 day ago' : `created ${deltaDays} days ago`
+  }
+
+  const d = then.getDate()
+  const mon = MONTHS[then.getMonth()]
+  const y = then.getFullYear()
+  return `created on ${d} ${mon} ${y}`
+}
+
+export function assigneeInitials(assignee) {
+  const name = typeof assignee === 'string' ? assignee.trim() : ''
+  if (!name) return '?'
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return (parts[0][0] ?? '?').toUpperCase()
+  const first = parts[0][0] ?? ''
+  const last = parts[parts.length - 1][0] ?? ''
+  return `${first}${last}`.toUpperCase() || '?'
+}
+
+function prefersReducedMotion() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false
+  }
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 // Presentational card for one task. All mutations are delegated upward via
 // callbacks so this component stays easy to test in isolation.
 export default function TaskCard({
@@ -36,10 +97,17 @@ export default function TaskCard({
   onPostComment,
   onDeleteComment,
   commentError,
+  animateEnter = false,
 }) {
   const currentIndex = STATUSES.indexOf(task.status)
   const nextStatus = STATUSES[currentIndex + 1]
   const count = commentCountOf(task)
+  const initials = assigneeInitials(task.assignee)
+  const createdLabel = formatRelativeCreated(taskCreatedAt(task))
+  const assigneeLabel = task.assignee?.trim()
+    ? `Assigned to ${task.assignee.trim()}`
+    : 'Unassigned'
+  const enterClass = animateEnter && !prefersReducedMotion() ? 'card card-enter' : 'card'
 
   function handlePost(event) {
     event.preventDefault()
@@ -53,19 +121,24 @@ export default function TaskCard({
   }
 
   return (
-    <article className="card" data-testid={`task-${task.id}`}>
-      <h3>{task.title}</h3>
-      {task.description && <p>{task.description}</p>}
-      <span className="assignee">
-        {task.assignee ? `Assigned to ${task.assignee}` : 'Unassigned'}
-      </span>
+    <article className={enterClass} data-testid={`task-${task.id}`}>
+      <div className="card-top">
+        <span className="avatar" aria-label={assigneeLabel} title={assigneeLabel}>
+          {initials}
+        </span>
+        <div className="card-body">
+          <h3>{task.title}</h3>
+          {task.description && <p className="card-description">{task.description}</p>}
+          {createdLabel && <time className="card-created">{createdLabel}</time>}
+        </div>
+      </div>
       <div className="card-actions">
         {nextStatus && (
-          <button onClick={() => onAdvance(task, nextStatus)}>
+          <button className="btn-move" onClick={() => onAdvance(task, nextStatus)}>
             Move to {STATUS_LABELS[nextStatus]}
           </button>
         )}
-        <button onClick={() => onDelete(task)}>Delete</button>
+        <button className="btn-delete" onClick={() => onDelete(task)}>Delete</button>
         <button
           className="comment-toggle"
           aria-expanded={commentsOpen}
@@ -78,7 +151,7 @@ export default function TaskCard({
       {commentsOpen && (
         <div className="comment-thread">
           {comments.length === 0 && (
-            <p className="assignee">No comments yet</p>
+            <p className="column-empty">No comments yet</p>
           )}
           <ol className="comment-list">
             {comments.map((comment) => (

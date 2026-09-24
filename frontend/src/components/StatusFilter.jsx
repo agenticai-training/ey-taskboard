@@ -3,7 +3,7 @@ import { STATUSES, STATUS_LABELS } from '../constants'
 // Dropdown that narrows the board to a single status (or "all").
 export default function StatusFilter({ value, onChange }) {
   return (
-    <label>
+    <label className="status-filter">
       Filter by status
       <select
         aria-label="Filter by status"
