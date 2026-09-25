@@ -1,17 +1,3 @@
-<!--
-Sync Impact Report
-- Version change: 1.0.0 → 1.1.0
-- Modified principles: III. Test-First Endpoints — unit and API tests stay
-  in-memory; Playwright end-to-end is the only suite allowed to hit a real
-  database
-- Added sections: none
-- Removed sections: none
-- Modified sections: Quality Gates — Playwright in frontend/e2e/ added as a
-  suite run separately from npm test; Governance alignment list includes
-  .cursor/rules/engineering.mdc
-- Follow-up TODOs: none
--->
-
 # Engineering Task Board Constitution
 
 ## Core Principles

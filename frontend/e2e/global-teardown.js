@@ -1,10 +1,5 @@
 import { execSync } from 'node:child_process'
-import { unlinkSync } from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const envLocalPath = path.resolve(__dirname, '../.env.local')
 const dbName = 'taskboard_e2e'
 
 export default async function globalTeardown() {
@@ -19,10 +14,5 @@ export default async function globalTeardown() {
     )
   } catch {
     // Best-effort cleanup; report via test run if drop fails.
-  }
-  try {
-    unlinkSync(envLocalPath)
-  } catch {
-    // .env.local may already be absent.
   }
 }

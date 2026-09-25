@@ -80,6 +80,22 @@ test.describe('User Story 1 — Find a task by typing a search query', () => {
     await expect(columnSection(page, 'Done').getByRole('heading', { name: 'Done match item', level: 3 })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Unrelated task', level: 3 })).toBeHidden()
   })
+
+  test('US1-5: percent and underscore in the query match literally', async ({ page }) => {
+    await createTask({ title: '50% done', status: 'todo' })
+    await createTask({ title: '500 done', status: 'todo' })
+    await createTask({ title: 'a_b title', status: 'in-progress' })
+    await createTask({ title: 'axb title', status: 'in-progress' })
+    await waitForBoardReady(page)
+
+    await typeSearchQuery(page, '50%')
+    await expect(page.getByRole('heading', { name: '50% done', level: 3 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '500 done', level: 3 })).toBeHidden()
+
+    await typeSearchQuery(page, 'a_b')
+    await expect(page.getByRole('heading', { name: 'a_b title', level: 3 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'axb title', level: 3 })).toBeHidden()
+  })
 })
 
 test.describe('User Story 2 — Combine search with the status filter', () => {
