@@ -14,10 +14,11 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 @router.get("", response_model=list[TaskRead])
 async def list_tasks(
     status: str | None = Query(default=None, description="Filter by task status"),
+    q: str | None = Query(default=None, description="Search title, description, or assignee"),
     service: TaskService = Depends(get_task_service),
 ) -> list[TaskRead]:
     try:
-        tasks = await service.list_tasks(status)
+        tasks = await service.list_tasks(status, q)
     except InvalidStatus as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return [TaskRead.model_validate(t) for t in tasks]

@@ -31,19 +31,73 @@ public class TaskServiceTests
     [Fact]
     public async Task ListAsync_PassesStatusFilterToRepository()
     {
-        _repo.Setup(r => r.ListAsync("done", It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.ListAsync("done", null, It.IsAny<CancellationToken>()))
              .ReturnsAsync(new List<TaskItem> { Sample(1, TaskStatuses.Done) });
 
         var result = await _sut.ListAsync("done");
 
         Assert.Single(result);
-        _repo.Verify(r => r.ListAsync("done", It.IsAny<CancellationToken>()), Times.Once);
+        _repo.Verify(r => r.ListAsync("done", null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task ListAsync_RejectsUnknownStatus()
     {
         await Assert.ThrowsAsync<InvalidStatusException>(() => _sut.ListAsync("archived"));
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("  ", null)]
+    [InlineData("ab", null)]
+    [InlineData("  ab  ", null)]
+    [InlineData("abc", "abc")]
+    [InlineData("  wire  ", "wire")]
+    public void NormalizeQuery_AppliesTrimMinLengthAndTruncate(string? input, string? expected)
+    {
+        Assert.Equal(expected, TaskService.NormalizeQuery(input));
+    }
+
+    [Fact]
+    public void NormalizeQuery_TruncatesTo200()
+    {
+        var longQuery = new string('x', 250);
+        Assert.Equal(new string('x', 200), TaskService.NormalizeQuery(longQuery));
+    }
+
+    [Fact]
+    public async Task ListAsync_PassesNormalizedQueryToRepository()
+    {
+        _repo.Setup(r => r.ListAsync(null, "WIRE", It.IsAny<CancellationToken>()))
+             .ReturnsAsync(new List<TaskItem> { Sample() });
+
+        await _sut.ListAsync(null, "  WIRE  ");
+
+        _repo.Verify(r => r.ListAsync(null, "WIRE", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ListAsync_TreatsShortQueryAsInactive()
+    {
+        _repo.Setup(r => r.ListAsync(null, null, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(new List<TaskItem>());
+
+        await _sut.ListAsync(null, "ab");
+
+        _repo.Verify(r => r.ListAsync(null, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ListAsync_PassesStatusAndSearchTogether()
+    {
+        _repo.Setup(r => r.ListAsync("in-progress", "ana", It.IsAny<CancellationToken>()))
+             .ReturnsAsync(new List<TaskItem> { Sample(1, TaskStatuses.InProgress) });
+
+        var result = await _sut.ListAsync("in-progress", "ana");
+
+        Assert.Single(result);
+        _repo.Verify(
+            r => r.ListAsync("in-progress", "ana", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

@@ -48,29 +48,69 @@ class TaskServiceImplTest {
 
     @Test
     void listPassesStatusFilterThrough() {
-        when(repository.findByOptionalStatus("done"))
+        when(repository.findByOptionalStatusAndQuery("done", null))
                 .thenReturn(List.of(sample(1, TaskStatuses.DONE)));
         when(comments.countGroupedByTaskIds(List.of(1))).thenReturn(List.of());
 
-        List<TaskResponse> result = service.list("done");
+        List<TaskResponse> result = service.list("done", null);
 
         assertThat(result).hasSize(1);
-        verify(repository).findByOptionalStatus("done");
+        verify(repository).findByOptionalStatusAndQuery("done", null);
     }
 
     @Test
     void listWithBlankStatusQueriesWithNull() {
-        when(repository.findByOptionalStatus(null)).thenReturn(List.of());
+        when(repository.findByOptionalStatusAndQuery(null, null)).thenReturn(List.of());
 
-        service.list("  ");
+        service.list("  ", null);
 
-        verify(repository).findByOptionalStatus(null);
+        verify(repository).findByOptionalStatusAndQuery(null, null);
     }
 
     @Test
     void listRejectsUnknownStatus() {
-        assertThatThrownBy(() -> service.list("archived"))
+        assertThatThrownBy(() -> service.list("archived", null))
                 .isInstanceOf(InvalidStatusException.class);
+    }
+
+    @Test
+    void normalizeQueryTrimsAndEnforcesLength() {
+        assertThat(TaskServiceImpl.normalizeQuery(null)).isNull();
+        assertThat(TaskServiceImpl.normalizeQuery("  ")).isNull();
+        assertThat(TaskServiceImpl.normalizeQuery("ab")).isNull();
+        assertThat(TaskServiceImpl.normalizeQuery("abc")).isEqualTo("abc");
+        assertThat(TaskServiceImpl.normalizeQuery("  wire  ")).isEqualTo("wire");
+        assertThat(TaskServiceImpl.normalizeQuery("x".repeat(250))).isEqualTo("x".repeat(200));
+    }
+
+    @Test
+    void listPassesNormalizedQueryToRepository() {
+        when(repository.findByOptionalStatusAndQuery(null, "WIRE")).thenReturn(List.of());
+
+        service.list(null, "  WIRE  ");
+
+        verify(repository).findByOptionalStatusAndQuery(null, "WIRE");
+    }
+
+    @Test
+    void listTreatsShortQueryAsInactive() {
+        when(repository.findByOptionalStatusAndQuery(null, null)).thenReturn(List.of());
+
+        service.list(null, "ab");
+
+        verify(repository).findByOptionalStatusAndQuery(null, null);
+    }
+
+    @Test
+    void listPassesStatusAndSearchTogether() {
+        when(repository.findByOptionalStatusAndQuery("in-progress", "ana"))
+                .thenReturn(List.of(sample(1, TaskStatuses.IN_PROGRESS)));
+        when(comments.countGroupedByTaskIds(List.of(1))).thenReturn(List.of());
+
+        List<TaskResponse> result = service.list("in-progress", "ana");
+
+        assertThat(result).hasSize(1);
+        verify(repository).findByOptionalStatusAndQuery("in-progress", "ana");
     }
 
     @Test

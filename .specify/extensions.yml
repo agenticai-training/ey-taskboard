@@ -1,0 +1,33 @@
+# Project extension hooks. SpecKit skills read hooks.before_* and hooks.after_*.
+# A mandatory command taskboard.hooks.<name> maps to
+# .specify/extensions/hooks/<name>.sh. Specialists run that script and wait.
+
+installed: []
+
+settings:
+  auto_execute_hooks: true
+
+hooks:
+  before_specify:
+    - extension: taskboard
+      command: taskboard.hooks.before-specify
+      enabled: true
+      optional: false
+      priority: 10
+      description: Create and check out the feature branch from the Jira summary. Does not write spec files.
+
+  before_implement:
+    - extension: taskboard
+      command: taskboard.hooks.before-implement
+      enabled: true
+      optional: false
+      priority: 10
+      description: Require spec.md, tasks.md, and a quality gate for the current feature directory.
+
+  after_implement:
+    - extension: taskboard
+      command: taskboard.hooks.after-implement
+      enabled: true
+      optional: false
+      priority: 10
+      description: Re-run unit and API tests for every stack the story changed.

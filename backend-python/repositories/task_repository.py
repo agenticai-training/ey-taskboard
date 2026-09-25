@@ -1,7 +1,7 @@
 """Data-access layer for tasks. Knows about SQLAlchemy; knows nothing about HTTP."""
 from collections.abc import Sequence
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.task import Task
@@ -11,10 +11,21 @@ class TaskRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def list(self, status: str | None = None) -> Sequence[Task]:
+    async def list(
+        self, status: str | None = None, q: str | None = None
+    ) -> Sequence[Task]:
         stmt = select(Task).order_by(Task.id)
         if status:
             stmt = stmt.where(Task.status == status)
+        if q:
+            pattern = f"%{q}%"
+            stmt = stmt.where(
+                or_(
+                    Task.title.ilike(pattern),
+                    Task.description.ilike(pattern),
+                    Task.assignee.ilike(pattern),
+                )
+            )
         result = await self._session.execute(stmt)
         return result.scalars().all()
 

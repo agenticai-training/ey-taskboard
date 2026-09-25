@@ -74,4 +74,32 @@ describe('TaskList', () => {
     )
     expect(screen.getAllByText('No tasks yet')).toHaveLength(3)
   })
+
+  it('shows board-level no-match message when searchActive and empty', () => {
+    render(
+      <TaskList
+        tasks={[]}
+        filter="all"
+        searchActive
+        onAdvance={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('No tasks match your search')).toBeInTheDocument()
+    expect(screen.queryByText('No tasks yet')).not.toBeInTheDocument()
+  })
+
+  it('keeps per-column empty copy when search is off', () => {
+    render(
+      <TaskList
+        tasks={[]}
+        filter="all"
+        searchActive={false}
+        onAdvance={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('No tasks match your search')).not.toBeInTheDocument()
+    expect(screen.getAllByText('No tasks yet')).toHaveLength(3)
+  })
 })

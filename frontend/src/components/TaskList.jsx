@@ -3,9 +3,11 @@ import TaskCard from './TaskCard'
 
 // Renders the three Kanban columns. Always shows all statuses; the filter only
 // limits which tasks appear in each column (filtered-out columns stay at count 0).
+// Column counts reflect the server-returned set (no client re-filter of search).
 export default function TaskList({
   tasks,
   filter,
+  searchActive = false,
   onAdvance,
   onDelete,
   commentsByTask,
@@ -18,9 +20,15 @@ export default function TaskList({
 }) {
   const visibleTasks =
     filter === 'all' ? tasks : tasks.filter((t) => t.status === filter)
+  const noMatch = searchActive && visibleTasks.length === 0
 
   return (
     <div className="board">
+      {noMatch && (
+        <p className="board-no-match" role="status">
+          No tasks match your search
+        </p>
+      )}
       {STATUSES.map((status) => {
         const columnTasks = visibleTasks.filter((t) => t.status === status)
         return (
@@ -35,7 +43,7 @@ export default function TaskList({
                 {columnTasks.length}
               </span>
             </div>
-            {columnTasks.length === 0 && (
+            {columnTasks.length === 0 && !noMatch && (
               <p className="column-empty">No tasks yet</p>
             )}
             {columnTasks.map((task) => (

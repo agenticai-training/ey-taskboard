@@ -5,5 +5,8 @@
 # switch features, so it is per-checkout state rather than something to share.
 feature.json
 
+# Per-checkout SpecKit run state written by taskboard-orchestrator.
+handoff.json
+
 # Per-machine extension config overrides.
 extensions/*/local-config.yml

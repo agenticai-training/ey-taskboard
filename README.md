@@ -313,17 +313,24 @@ Copilot instruction changes, update the matching Cursor rule in the same change.
 | `skills/*/SKILL.md` | SpecKit skills those agents follow |
 | `mcp.json` | Atlassian Rovo MCP, used to read Jira issues |
 
-Start a story with `/speckit-orchestrator <ISSUE-KEY>` (for example `EYTB-1`).
-The orchestrator runs one specialist at a time:
+Start a story with `/taskboard-orchestrator <ISSUE-KEY>` (for example `EYTB-1`).
+The orchestrator asks for the issue key, writes `.specify/handoff.json` after
+each specialist, and stops on a failed gate. `taskboard-analyze` and
+`taskboard-checklist` run together after `tasks.md` exists. Playwright runs
+only in `taskboard-test`, after unit and API tests pass.
 
 | Agent | Role |
 |-------|------|
-| `jira-story-reader` | Read the Jira issue and write `.specify/jira/<KEY>.md` |
-| `speckit-specify` | Write `spec.md` from that brief |
-| `speckit-plan` | Write `plan.md` from the spec |
-| `speckit-tasks` | Write `tasks.md` from the spec and plan |
-| `speckit-implement` | Implement the tasks |
+| `taskboard-jira-reader` | Read the Jira issue and write `.specify/jira/<KEY>.md` |
+| `taskboard-specify` | Write `spec.md` from that brief |
+| `taskboard-clarify` | Ask the user and record the answers in the spec |
+| `taskboard-plan` | Write `plan.md` from the spec |
+| `taskboard-tasks` | Write `tasks.md` from the spec and plan |
+| `taskboard-analyze` | Read-only consistency check |
+| `taskboard-checklist` | Requirements-quality checklist |
+| `taskboard-implement` | Implement the tasks; unit and API tests only |
+| `taskboard-test` | Playwright end-to-end against the acceptance scenarios |
 
-Other skills (`speckit-analyze`, `speckit-checklist`, `speckit-clarify`,
-`speckit-constitution`, `speckit-converge`, `speckit-taskstoissues`) support
-the same cycle and are invoked on their own.
+`taskboard-constitution` amends the constitution and is not part of a feature
+run. Skills keep their `speckit-` names. Other skills (`speckit-converge`,
+`speckit-taskstoissues`) stay available on their own.

@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface TaskService {
 
-    List<TaskResponse> list(String status);
+    List<TaskResponse> list(String status, String q);
 
     TaskResponse get(int id);
 

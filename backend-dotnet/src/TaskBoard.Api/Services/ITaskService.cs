@@ -4,7 +4,8 @@ namespace TaskBoard.Api.Services;
 
 public interface ITaskService
 {
-    Task<IReadOnlyList<TaskResponse>> ListAsync(string? status, CancellationToken ct = default);
+    Task<IReadOnlyList<TaskResponse>> ListAsync(
+        string? status, string? q = null, CancellationToken ct = default);
     Task<TaskResponse> GetAsync(int id, CancellationToken ct = default);
     Task<TaskResponse> CreateAsync(CreateTaskRequest request, CancellationToken ct = default);
     Task<TaskResponse> UpdateAsync(int id, UpdateTaskRequest request, CancellationToken ct = default);

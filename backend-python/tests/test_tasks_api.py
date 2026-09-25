@@ -125,3 +125,90 @@ async def test_count_filters_by_status(client, fake_repo):
 async def test_count_rejects_unknown_status(client):
     resp = await client.get("/api/tasks/count", params={"status": "archived"})
     assert resp.status_code == 422
+
+
+async def test_list_search_case_insensitive_title_contains(client, fake_repo):
+    fake_repo.seed(title="Wire up the board UI", status="todo")
+    fake_repo.seed(title="Other task", status="todo")
+
+    resp = await client.get("/api/tasks", params={"q": "wire"})
+    assert resp.status_code == 200
+    titles = [t["title"] for t in resp.json()]
+    assert titles == ["Wire up the board UI"]
+
+
+async def test_list_search_matches_description_or_assignee(client, fake_repo):
+    fake_repo.seed(title="A", description="Deploy to staging", assignee=None)
+    fake_repo.seed(title="B", description=None, assignee="Ana")
+    fake_repo.seed(title="C", description="noop", assignee="Sam")
+
+    by_desc = await client.get("/api/tasks", params={"q": "staging"})
+    assert [t["title"] for t in by_desc.json()] == ["A"]
+
+    by_assignee = await client.get("/api/tasks", params={"q": "ana"})
+    assert [t["title"] for t in by_assignee.json()] == ["B"]
+
+
+async def test_list_search_matches_full_stored_description(client, fake_repo):
+    long_desc = "Visible summary. " + ("hidden detail " * 20) + "needlephrase"
+    fake_repo.seed(title="Card", description=long_desc)
+    fake_repo.seed(title="Other", description="no match here")
+
+    resp = await client.get("/api/tasks", params={"q": "needlephrase"})
+    assert resp.status_code == 200
+    assert [t["title"] for t in resp.json()] == ["Card"]
+
+
+async def test_list_inactive_q_returns_unfiltered(client, fake_repo):
+    fake_repo.seed(title="One")
+    fake_repo.seed(title="Two")
+
+    missing = await client.get("/api/tasks")
+    short = await client.get("/api/tasks", params={"q": "ab"})
+    whitespace = await client.get("/api/tasks", params={"q": "   "})
+
+    assert missing.status_code == 200
+    assert short.json() == missing.json()
+    assert whitespace.json() == missing.json()
+
+
+async def test_list_q_truncated_at_200(client, fake_repo):
+    needle = "x" * 200
+    fake_repo.seed(title="Hit", description=needle + "TAIL")
+    fake_repo.seed(title="Miss", description="y" * 50)
+
+    # Client sends >200 chars; server truncates to 200 before matching.
+    resp = await client.get("/api/tasks", params={"q": needle + "EXTRA"})
+    assert resp.status_code == 200
+    assert [t["title"] for t in resp.json()] == ["Hit"]
+
+
+async def test_list_status_and_q_intersection(client, fake_repo):
+    fake_repo.seed(title="Keep", status="in-progress", assignee="Ana")
+    fake_repo.seed(title="Wrong status", status="todo", assignee="Ana")
+    fake_repo.seed(title="Wrong query", status="in-progress", assignee="Sam")
+
+    resp = await client.get(
+        "/api/tasks", params={"status": "in-progress", "q": "ana"}
+    )
+    assert resp.status_code == 200
+    assert [t["title"] for t in resp.json()] == ["Keep"]
+
+
+async def test_list_inactive_q_with_status_is_status_only(client, fake_repo):
+    fake_repo.seed(title="A", status="todo")
+    fake_repo.seed(title="B", status="done")
+
+    status_only = await client.get("/api/tasks", params={"status": "todo"})
+    short_q = await client.get("/api/tasks", params={"status": "todo", "q": "ab"})
+    blank_q = await client.get("/api/tasks", params={"status": "todo", "q": "   "})
+
+    assert short_q.json() == status_only.json()
+    assert blank_q.json() == status_only.json()
+
+
+async def test_list_active_q_no_matches_returns_empty_array(client, fake_repo):
+    fake_repo.seed(title="Something")
+    resp = await client.get("/api/tasks", params={"q": "zzzz-no-match"})
+    assert resp.status_code == 200
+    assert resp.json() == []

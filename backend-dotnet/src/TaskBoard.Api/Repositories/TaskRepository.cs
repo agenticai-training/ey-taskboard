@@ -10,11 +10,20 @@ public class TaskRepository : ITaskRepository
 
     public TaskRepository(TaskBoardContext db) => _db = db;
 
-    public async Task<IReadOnlyList<TaskItem>> ListAsync(string? status, CancellationToken ct = default)
+    public async Task<IReadOnlyList<TaskItem>> ListAsync(
+        string? status, string? q = null, CancellationToken ct = default)
     {
         IQueryable<TaskItem> query = _db.Tasks.AsNoTracking().OrderBy(t => t.Id);
         if (!string.IsNullOrWhiteSpace(status))
             query = query.Where(t => t.Status == status);
+        if (!string.IsNullOrEmpty(q))
+        {
+            var needle = q.ToLowerInvariant();
+            query = query.Where(t =>
+                (t.Title != null && t.Title.ToLower().Contains(needle)) ||
+                (t.Description != null && t.Description.ToLower().Contains(needle)) ||
+                (t.Assignee != null && t.Assignee.ToLower().Contains(needle)));
+        }
         return await query.ToListAsync(ct);
     }
 

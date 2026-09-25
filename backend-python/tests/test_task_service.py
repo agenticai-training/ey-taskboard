@@ -66,3 +66,42 @@ async def test_count_filters_by_status(service):
 async def test_count_rejects_invalid_status(service):
     with pytest.raises(InvalidStatus):
         await service.count_tasks("blocked")
+
+
+def test_normalize_query_trims_and_enforces_length():
+    assert TaskService._normalize_query(None) is None
+    assert TaskService._normalize_query("  ") is None
+    assert TaskService._normalize_query("ab") is None
+    assert TaskService._normalize_query("  ab  ") is None
+    assert TaskService._normalize_query("abc") == "abc"
+    assert TaskService._normalize_query("  wire  ") == "wire"
+    long = "x" * 250
+    assert TaskService._normalize_query(long) == "x" * 200
+
+
+async def test_list_tasks_delegates_effective_query(service):
+    created = await service.create_task(
+        TaskCreate(title="Wire up the board UI", description="Other")
+    )
+    await service.create_task(TaskCreate(title="Unrelated"))
+
+    matched = await service.list_tasks(q="  WIRE  ")
+    assert [t.id for t in matched] == [created.id]
+
+    inactive = await service.list_tasks(q="ab")
+    assert len(inactive) == 2
+
+
+async def test_list_tasks_status_and_query_intersection(service):
+    keep = await service.create_task(
+        TaskCreate(title="Keep", status="in-progress", assignee="Ana")
+    )
+    await service.create_task(
+        TaskCreate(title="Wrong status", status="todo", assignee="Ana")
+    )
+    await service.create_task(
+        TaskCreate(title="Wrong query", status="in-progress", assignee="Sam")
+    )
+
+    result = await service.list_tasks(status="in-progress", q="ana")
+    assert [t.id for t in result] == [keep.id]

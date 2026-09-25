@@ -9,7 +9,9 @@ from services.errors import InvalidStatus, TaskNotFound
 
 
 class TaskRepositoryProtocol(Protocol):
-    async def list(self, status: str | None = None) -> Sequence[Task]: ...
+    async def list(
+        self, status: str | None = None, q: str | None = None
+    ) -> Sequence[Task]: ...
     async def count(self, status: str | None = None) -> int: ...
     async def get(self, task_id: int) -> Task | None: ...
     async def add(self, task: Task) -> Task: ...
@@ -40,16 +42,30 @@ class TaskService:
             task.comment_count = counts.get(task.id, 0)
         return tasks
 
+    @staticmethod
+    def _normalize_query(q: str | None) -> str | None:
+        """Trim; inactive when empty/whitespace or len < 3; truncate to 200."""
+        if q is None:
+            return None
+        trimmed = q.strip()
+        if len(trimmed) < 3:
+            return None
+        if len(trimmed) > 200:
+            return trimmed[:200]
+        return trimmed
 
     @staticmethod
     def _validate_status(status: str) -> None:
         if status not in VALID_STATUSES:
             raise InvalidStatus(status)
 
-    async def list_tasks(self, status: str | None = None) -> Sequence[Task]:
+    async def list_tasks(
+        self, status: str | None = None, q: str | None = None
+    ) -> Sequence[Task]:
         if status is not None:
             self._validate_status(status)
-        return await self._attach_counts(await self._repo.list(status))
+        effective = self._normalize_query(q)
+        return await self._attach_counts(await self._repo.list(status, effective))
 
     async def count_tasks(self, status: str | None = None) -> int:
         if status is not None:

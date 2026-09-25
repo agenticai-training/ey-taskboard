@@ -21,10 +21,10 @@ public class TasksControllerTests
     [Fact]
     public async Task List_ReturnsOkWithTasks()
     {
-        _service.Setup(s => s.ListAsync(null, It.IsAny<CancellationToken>()))
+        _service.Setup(s => s.ListAsync(null, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<TaskResponse> { Response() });
 
-        var action = await _sut.List(null, CancellationToken.None);
+        var action = await _sut.List(null, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(action.Result);
         var tasks = Assert.IsAssignableFrom<IReadOnlyList<TaskResponse>>(ok.Value);
@@ -34,10 +34,10 @@ public class TasksControllerTests
     [Fact]
     public async Task List_ReturnsUnprocessableEntityForBadStatus()
     {
-        _service.Setup(s => s.ListAsync("bad", It.IsAny<CancellationToken>()))
+        _service.Setup(s => s.ListAsync("bad", null, It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidStatusException("bad"));
 
-        var action = await _sut.List("bad", CancellationToken.None);
+        var action = await _sut.List("bad", null, CancellationToken.None);
 
         Assert.IsType<UnprocessableEntityObjectResult>(action.Result);
     }
@@ -91,16 +91,39 @@ public class TasksControllerTests
     [Fact]
     public async Task List_IncludesCommentCount()
     {
-        _service.Setup(s => s.ListAsync(null, It.IsAny<CancellationToken>()))
+        _service.Setup(s => s.ListAsync(null, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<TaskResponse>
                 {
                     new(1, "Sample", null, TaskStatuses.Todo, null, DateTime.UtcNow, DateTime.UtcNow, 3),
                 });
 
-        var action = await _sut.List(null, CancellationToken.None);
+        var action = await _sut.List(null, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(action.Result);
         var tasks = Assert.IsAssignableFrom<IReadOnlyList<TaskResponse>>(ok.Value);
         Assert.Equal(3, tasks[0].CommentCount);
+    }
+
+    [Fact]
+    public async Task List_PassesOptionalQueryToService()
+    {
+        _service.Setup(s => s.ListAsync(null, "wire", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<TaskResponse> { Response() });
+
+        var action = await _sut.List(null, "wire", CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(action.Result);
+        _service.Verify(s => s.ListAsync(null, "wire", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task List_Returns422ForUnknownStatusEvenWithQuery()
+    {
+        _service.Setup(s => s.ListAsync("archived", "wire", It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidStatusException("archived"));
+
+        var action = await _sut.List("archived", "wire", CancellationToken.None);
+
+        Assert.IsType<UnprocessableEntityObjectResult>(action.Result);
     }
 }

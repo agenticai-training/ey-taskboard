@@ -21,3 +21,4 @@ When a Copilot instruction changes, update the matching Cursor rule in the same 
 - Backend (Python): `cd backend-python && pytest`
 - Backend (Java): `cd backend-java && ./mvnw -B test`
 - Frontend: `cd frontend && npm test -- --run`
+- End-to-end: Playwright in `frontend/e2e/`, run separately from `npm test -- --run`. This is the only suite allowed to hit a real database. Unit and API suites stay in-memory.

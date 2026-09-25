@@ -24,12 +24,25 @@ public class TaskService : ITaskService
         return await _comments.CountByTaskIdsAsync(ids, ct);
     }
 
-    public async Task<IReadOnlyList<TaskResponse>> ListAsync(string? status, CancellationToken ct = default)
+    /// <summary>
+    /// Trim; inactive when empty/whitespace or length &lt; 3; truncate to 200.
+    /// </summary>
+    public static string? NormalizeQuery(string? q)
+    {
+        if (q is null) return null;
+        var trimmed = q.Trim();
+        if (trimmed.Length < 3) return null;
+        return trimmed.Length > 200 ? trimmed[..200] : trimmed;
+    }
+
+    public async Task<IReadOnlyList<TaskResponse>> ListAsync(
+        string? status, string? q = null, CancellationToken ct = default)
     {
         if (!string.IsNullOrWhiteSpace(status) && !TaskStatuses.IsValid(status))
             throw new InvalidStatusException(status);
 
-        var tasks = await _repo.ListAsync(status, ct);
+        var effective = NormalizeQuery(q);
+        var tasks = await _repo.ListAsync(status, effective, ct);
         var counts = await CountsFor(tasks, ct);
         return tasks.Select(t => TaskResponse.From(t, counts.GetValueOrDefault(t.Id, 0))).ToList();
     }

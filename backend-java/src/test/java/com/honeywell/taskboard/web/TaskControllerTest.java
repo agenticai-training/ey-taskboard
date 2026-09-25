@@ -63,7 +63,7 @@ class TaskControllerTest {
 
     @Test
     void listReturnsTasks() throws Exception {
-        when(service.list(null)).thenReturn(List.of(response(1)));
+        when(service.list(null, null)).thenReturn(List.of(response(1)));
 
         mvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
@@ -72,7 +72,7 @@ class TaskControllerTest {
 
     @Test
     void listReturns422ForBadStatus() throws Exception {
-        when(service.list("bad")).thenThrow(new InvalidStatusException("bad"));
+        when(service.list("bad", null)).thenThrow(new InvalidStatusException("bad"));
 
         mvc.perform(get("/api/tasks").param("status", "bad"))
                 .andExpect(status().isUnprocessableEntity())
@@ -124,13 +124,32 @@ class TaskControllerTest {
 
     @Test
     void listIncludesCommentCount() throws Exception {
-        when(service.list(null)).thenReturn(List.of(
+        when(service.list(null, null)).thenReturn(List.of(
                 new TaskResponse(1, "Sample", null, TaskStatuses.TODO, null,
                         LocalDateTime.now(), LocalDateTime.now(), 3)));
 
         mvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].commentCount").value(3));
+    }
+
+    @Test
+    void listPassesOptionalQueryToService() throws Exception {
+        when(service.list(null, "wire")).thenReturn(List.of(response(1)));
+
+        mvc.perform(get("/api/tasks").param("q", "wire"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+
+        verify(service).list(null, "wire");
+    }
+
+    @Test
+    void listReturns422ForUnknownStatusEvenWithQuery() throws Exception {
+        when(service.list("archived", "wire")).thenThrow(new InvalidStatusException("archived"));
+
+        mvc.perform(get("/api/tasks").param("status", "archived").param("q", "wire"))
+                .andExpect(status().isUnprocessableEntity());
     }
 
     @Test
