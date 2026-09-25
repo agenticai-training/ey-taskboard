@@ -32,14 +32,29 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
+    /**
+     * Trim; inactive when empty/whitespace or length &lt; 3; truncate to 200.
+     */
+    static String normalizeQuery(String q) {
+        if (q == null) {
+            return null;
+        }
+        String trimmed = q.trim();
+        if (trimmed.length() < 3) {
+            return null;
+        }
+        return trimmed.length() > 200 ? trimmed.substring(0, 200) : trimmed;
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<TaskResponse> list(String status) {
+    public List<TaskResponse> list(String status, String q) {
         String filter = StringUtils.hasText(status) ? status : null;
         if (filter != null) {
             validateStatus(filter);
         }
-        List<TaskItem> rows = repository.findByOptionalStatus(filter);
+        String effective = normalizeQuery(q);
+        List<TaskItem> rows = repository.findByOptionalStatusAndQuery(filter, effective);
         Map<Integer, Long> counts = countsFor(rows.stream().map(TaskItem::getId).toList());
         return rows.stream()
                 .map(t -> TaskResponse.from(t, counts.getOrDefault(t.getId(), 0L)))

@@ -17,14 +17,14 @@ public class TasksController : ControllerBase
         _comments = comments;
     }
 
-    /// <summary>List tasks, optionally filtered by <paramref name="status"/>.</summary>
+    /// <summary>List tasks, optionally filtered by <paramref name="status"/> and search <paramref name="q"/>.</summary>
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<TaskResponse>>> List(
-        [FromQuery] string? status, CancellationToken ct)
+        [FromQuery] string? status, [FromQuery] string? q, CancellationToken ct)
     {
         try
         {
-            return Ok(await _service.ListAsync(status, ct));
+            return Ok(await _service.ListAsync(status, q, ct));
         }
         catch (InvalidStatusException ex)
         {

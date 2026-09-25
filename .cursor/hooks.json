@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "hooks": {
+    "subagentStart": [
+      {
+        "command": ".cursor/hooks/subagent-start.py",
+        "matcher": "^taskboard-(specify|clarify|plan|tasks|analyze|checklist|implement|test)$",
+        "failClosed": true
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": ".cursor/hooks/subagent-stop.py",
+        "matcher": "^taskboard-(jira-reader|specify|clarify|plan|tasks|analyze|checklist|implement|test)$",
+        "loop_limit": 1
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": ".cursor/hooks/before-mcp.py",
+        "failClosed": true
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": ".cursor/hooks/before-read-file.py",
+        "failClosed": true
+      }
+    ]
+  }
+}

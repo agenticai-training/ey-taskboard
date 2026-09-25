@@ -41,14 +41,17 @@ public class TaskController {
     }
 
     @GetMapping
-    @Operation(summary = "List tasks", description = "Returns all tasks, or only those matching an optional status filter.")
+    @Operation(summary = "List tasks",
+            description = "Returns all tasks, optionally filtered by status and/or search query q.")
     @ApiResponse(responseCode = "200", description = "Tasks returned")
     @ApiResponse(responseCode = "422", description = "Unknown status value", content = @Content)
     public List<TaskResponse> list(
             @Parameter(description = "Filter by status", example = "todo",
                     schema = @Schema(allowableValues = {"todo", "in-progress", "done"}))
-            @RequestParam(required = false) String status) {
-        return service.list(status);
+            @RequestParam(required = false) String status,
+            @Parameter(description = "Search title, description, or assignee")
+            @RequestParam(required = false) String q) {
+        return service.list(status, q);
     }
 
     @GetMapping("/{id}")

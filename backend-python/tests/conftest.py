@@ -41,9 +41,23 @@ class FakeTaskRepository:
         self._next_id += 1
         return task
 
-    async def list(self, status: str | None = None) -> Sequence[Task]:
+    async def list(
+        self, status: str | None = None, q: str | None = None
+    ) -> Sequence[Task]:
         rows = sorted(self._tasks.values(), key=lambda t: t.id)
-        return [t for t in rows if status is None or t.status == status]
+        if status is not None:
+            rows = [t for t in rows if t.status == status]
+        if q:
+            needle = q.lower()
+
+            def matches(task: Task) -> bool:
+                for value in (task.title, task.description, task.assignee):
+                    if value and needle in value.lower():
+                        return True
+                return False
+
+            rows = [t for t in rows if matches(t)]
+        return rows
 
     async def count(self, status: str | None = None) -> int:
         return len(await self.list(status))

@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import SearchBox from '../components/SearchBox'
 import StatusFilter from '../components/StatusFilter'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
 import { STATUS_LABELS } from '../constants'
 import * as taskService from '../services/taskService'
+import { normalizeSearchQuery } from '../services/taskService'
+
+const SEARCH_DEBOUNCE_MS = 250
 
 function countOf(task) {
   if (typeof task.commentCount === 'number') return task.commentCount
@@ -39,6 +43,8 @@ function BoardSkeleton() {
 export default function BoardPage() {
   const [tasks, setTasks] = useState([])
   const [filter, setFilter] = useState('all')
+  const [query, setQuery] = useState('')
+  const [activeQuery, setActiveQuery] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [expandedTaskId, setExpandedTaskId] = useState(null)
@@ -52,21 +58,38 @@ export default function BoardPage() {
     return () => clearTimeout(timer)
   }, [loading, enteringTaskId])
 
+  // Debounce active search; clear immediately when query becomes inactive.
+  useEffect(() => {
+    const effective = normalizeSearchQuery(query)
+    if (!effective) {
+      setActiveQuery(null)
+      return undefined
+    }
+    const timer = setTimeout(() => setActiveQuery(effective), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  const searchActive = activeQuery != null
+
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setTasks(await taskService.listTasks(filter))
+      setTasks(await taskService.listTasks(filter, activeQuery))
     } catch {
       setError('Could not load tasks. Is the backend running?')
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [filter, activeQuery])
 
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  function handleClearSearch() {
+    setQuery('')
+  }
 
   async function handleCreate(task) {
     const created = await taskService.createTask(task)
@@ -158,6 +181,11 @@ export default function BoardPage() {
 
       <div className="toolbar">
         <StatusFilter value={filter} onChange={setFilter} />
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          onClear={handleClearSearch}
+        />
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -165,6 +193,7 @@ export default function BoardPage() {
         <TaskList
           tasks={tasks}
           filter={filter}
+          searchActive={searchActive}
           onAdvance={handleAdvance}
           onDelete={handleDelete}
           commentsByTask={commentsByTask}

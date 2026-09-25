@@ -4,8 +4,19 @@ import api from './api'
 // module means components never import axios directly — which also makes them
 // trivial to test with a mocked service.
 
-export async function listTasks(status) {
-  const params = status && status !== 'all' ? { status } : {}
+/** Mirror server normalization: trim; inactive if < 3; truncate to 200. */
+export function normalizeSearchQuery(q) {
+  if (q == null) return null
+  const trimmed = String(q).trim()
+  if (trimmed.length < 3) return null
+  return trimmed.length > 200 ? trimmed.slice(0, 200) : trimmed
+}
+
+export async function listTasks(status, q) {
+  const params = {}
+  if (status && status !== 'all') params.status = status
+  const effective = normalizeSearchQuery(q)
+  if (effective) params.q = effective
   const { data } = await api.get('/api/tasks', { params })
   return data
 }

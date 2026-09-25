@@ -40,3 +40,4 @@ The React app layers the same way: `components/` (presentational) → `pages/`
 - Python: `pytest` in `backend-python/`
 - Java: `./mvnw -B test` in `backend-java/`
 - Frontend: `npm test -- --run` in `frontend/`
+- End-to-end: Playwright in `frontend/e2e/`, run separately from `npm test -- --run`. This is the only suite allowed to hit a real database. Unit and API suites stay in-memory.

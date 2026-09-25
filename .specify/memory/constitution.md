@@ -37,12 +37,16 @@ Any new or changed endpoint MUST have a test in the same layer before the
 change is considered done. Endpoint tests MUST cover: the happy path, `404`
 for a missing id, and `422` for a missing title or an unknown status.
 
-Tests MUST use the existing in-memory / fixture setup. They MUST NOT hit a
-real database. Tests MUST be named for behaviour
+Unit and API tests MUST use the existing in-memory / fixture setup. They MUST
+NOT hit a real database. The Playwright end-to-end suite in `frontend/e2e/` is
+the only suite allowed to hit a real database, and it runs separately from
+`npm test -- --run`. Tests MUST be named for behaviour
 (e.g. `returns_422_when_title_missing`), not for the method under test.
 
 Rationale: the domain is small so the contract is the product. Untested
-endpoints are how the three backends stop matching.
+endpoints are how the three backends stop matching. A real database belongs
+only in end-to-end, so unit and API suites stay fast and identical across
+stacks.
 
 ### IV. Single Schema Ownership
 
@@ -98,6 +102,8 @@ A backend or frontend change is not done until the matching suite passes:
 - Python: `pytest` in `backend-python/`
 - Java: `./mvnw -B test` in `backend-java/`
 - Frontend: `npm test -- --run` in `frontend/`
+- End-to-end: Playwright in `frontend/e2e/`, run separately from
+  `npm test -- --run`
 
 Test stacks MUST stay as they are:
 
@@ -105,11 +111,15 @@ Test stacks MUST stay as they are:
 - Python: pytest + `httpx.AsyncClient` against the FastAPI app.
 - Java: JUnit 5 + `@SpringBootTest` / `MockMvc`.
 - Frontend: Vitest + Testing Library.
+- End-to-end: Playwright, specs in `frontend/e2e/`.
+
+End-to-end is the only suite allowed to hit a real database. Unit and API
+suites MUST stay in-memory per `.cursor/rules/tests.mdc`.
 
 Runtime development guidance lives in `.github/copilot-instructions.md` and
-`AGENTS.md`. Path-scoped rules live in `.github/instructions/`. Those files
-MUST remain consistent with this constitution; if they conflict, this file
-wins and the guidance files MUST be updated.
+`AGENTS.md`. Path-scoped rules live in `.github/instructions/` and
+`.cursor/rules/`. Those files MUST remain consistent with this constitution;
+if they conflict, this file wins and the guidance files MUST be updated.
 
 ## Governance
 
@@ -125,12 +135,14 @@ Amendments:
    - PATCH: clarifications, wording, typos, non-semantic refinements.
 3. Set **Last Amended** to the amendment date (ISO `YYYY-MM-DD`).
 4. Remove the Sync Impact Report before the amendment is committed.
-5. Align `.github/copilot-instructions.md` and `AGENTS.md` in the same change
-   if runtime guidance would otherwise drift.
+5. Align `.github/copilot-instructions.md`, `AGENTS.md`, and
+   `.cursor/rules/engineering.mdc` in the same change if runtime guidance
+   would otherwise drift. When a Copilot instruction changes, update the
+   matching Cursor rule in the same change.
 
 Compliance review: any spec, plan, or implementation that would skip a layer,
 fork the REST contract, create schema outside `database/schema.sql`, ship an
 endpoint without tests, or invent error codes MUST be rejected until it
 conforms.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-21 | **Last Amended**: 2026-09-21
+**Version**: 1.1.0 | **Ratified**: 2026-09-21 | **Last Amended**: 2026-09-24
