@@ -19,6 +19,7 @@ PREDECESSOR = {
     "taskboard-checklist": "taskboard-tasks",
     "taskboard-implement": "review-quality",
     "taskboard-test": "taskboard-implement",
+    "taskboard-ci": "review-e2e",
 }
 
 PATH_FIELD = {

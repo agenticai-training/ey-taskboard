@@ -4,14 +4,14 @@
     "subagentStart": [
       {
         "command": ".cursor/hooks/subagent-start.py",
-        "matcher": "^taskboard-(specify|clarify|plan|tasks|analyze|checklist|implement|test)$",
+        "matcher": "^taskboard-(specify|clarify|plan|tasks|analyze|checklist|implement|test|ci)$",
         "failClosed": true
       }
     ],
     "subagentStop": [
       {
         "command": ".cursor/hooks/subagent-stop.py",
-        "matcher": "^taskboard-(jira-reader|specify|clarify|plan|tasks|analyze|checklist|implement|test)$",
+        "matcher": "^taskboard-(jira-reader|specify|clarify|plan|tasks|analyze|checklist|implement|test|ci)$",
         "loop_limit": 1
       }
     ],

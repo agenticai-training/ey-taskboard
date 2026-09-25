@@ -1,0 +1,86 @@
+# Default stack: Postgres + Python API + frontend.
+# Swap the API with: docker compose --profile dotnet up --build
+#                 or docker compose --profile java up --build
+# (stop the default `api` service first: docker compose stop api)
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: taskboard
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d taskboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: ./backend-python
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/taskboard
+      FRONTEND_ORIGIN: http://localhost:8088
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api-dotnet:
+    profiles: ["dotnet"]
+    build:
+      context: ./backend-dotnet
+    environment:
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=taskboard;Username=postgres;Password=postgres
+      Frontend__Origin: http://localhost:8088
+      ASPNETCORE_URLS: http://+:5088
+    ports:
+      - "5088:5088"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api-java:
+    profiles: ["java"]
+    build:
+      context: ./backend-java
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/taskboard
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      FRONTEND_ORIGIN: http://localhost:8088
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+    ports:
+      - "8088:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12

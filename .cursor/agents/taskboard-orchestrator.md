@@ -70,7 +70,9 @@ Launch each specialist with the Task tool, `subagent_type` equal to that agent `
 13. `taskboard-implement` with `feature_directory`, `tasks_file`, `quality_stamp`, `handoff_path`, and predecessor `review-quality`. It runs the before-implement and after-implement hooks. It does not open a browser.
 14. **review-implement.** Pass only when `dotnet test`, `pytest`, `./mvnw -B test`, and `npm test -- --run` pass for every stack the story touches. Unit and API tests only. Record each command and its result in `tests`. Write `step: taskboard-implement`, `expects: taskboard-test`.
 15. `taskboard-test` with `feature_directory`, `spec_file`, `handoff_path`, and predecessor `taskboard-implement`.
-16. **review-e2e.** Pass only when `taskboard-test` returns `status: ok`, the Playwright run exits 0, and `e2e_report` exists under the feature directory. Every user-visible acceptance scenario in `spec.md` has a passing test. A story with no user-visible scenario may return `skipped` only when the spec lists none; otherwise a skip aborts. Write `step: review-e2e`.
+16. **review-e2e.** Pass only when `taskboard-test` returns `status: ok`, the Playwright run exits 0, and `e2e_report` exists under the feature directory. Every user-visible acceptance scenario in `spec.md` has a passing test. A story with no user-visible scenario may return `skipped` only when the spec lists none; otherwise a skip aborts. Write `step: review-e2e` and `expects: taskboard-ci`.
+17. `taskboard-ci` with `feature_directory`, `issue_key`, `handoff_path`, and predecessor `review-e2e`. It does not edit application code. It opens a pull request so GitHub Actions runs.
+18. **review-ci.** Pass only when `taskboard-ci` returns `status: ok`, `pr_url` is a GitHub pull request URL, and these files exist: `backend-python/Dockerfile`, `backend-dotnet/Dockerfile`, `backend-java/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `docker-compose.yml`, `.github/workflows/ci.yml`. Missing files or a missing PR abort. On pass, write `step: review-ci`.
 
 A failed specialist or a rejected gate aborts the workflow. Do not start the next step.
 
@@ -80,7 +82,7 @@ A failed specialist or a rejected gate aborts the workflow. Do not start the nex
 issue_key: <KEY>
 stopped_at: <step name or complete>
 feature_directory: <path or none>
-artifacts: <brief, spec, plan, tasks, quality stamp, e2e report paths that exist>
+artifacts: <brief, spec, plan, tasks, quality stamp, e2e report, pr_url paths that exist>
 handoff: .specify/handoff.json
 gates: <gate name and pass/abort, one per line>
 result: <what was implemented, or why the run stopped>

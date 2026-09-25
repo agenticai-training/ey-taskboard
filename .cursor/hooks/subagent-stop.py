@@ -19,6 +19,7 @@ SPECIALISTS = {
     "taskboard-checklist",
     "taskboard-implement",
     "taskboard-test",
+    "taskboard-ci",
 }
 
 PARALLEL = {"taskboard-analyze", "taskboard-checklist"}

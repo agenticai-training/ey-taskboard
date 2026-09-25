@@ -1,6 +1,6 @@
 # Task search via a Jira story
 
-Build the feature described by a Jira user story through the SpecKit cycle. One `taskboard-orchestrator` master fetches the story, then runs taskboard specialists in order. Each specialist follows the matching SpecKit skill and returns a handoff the master writes before the next launch. Quality gates and hooks abort on failure. Analysis runs in parallel, and `taskboard-test` runs Playwright end-to-end after implementation.
+Build the feature described by a Jira user story through the SpecKit cycle. One `taskboard-orchestrator` master fetches the story, then runs taskboard specialists in order. Each specialist follows the matching SpecKit skill and returns a handoff the master writes before the next launch. Quality gates and hooks abort on failure. Analysis runs in parallel, `taskboard-test` runs Playwright end-to-end after implementation, and `taskboard-ci` opens a pull request so GitHub Actions runs.
 
 The workflow is story-agnostic. It does not choose, look up, or assume an issue key, and it does not assume the feature is search. Run the Full SDD cycle in [`.specify/workflows/speckit/workflow.yml`](../.specify/workflows/speckit/workflow.yml). The master does not read Jira, write the spec, write the plan, write tasks, or edit application code. Specialists do. A failed specialist or a rejected gate aborts the run.
 
@@ -14,7 +14,7 @@ The first action of a run is to take `issue_key` from the user. If it is missing
 - State that end-to-end is the only suite allowed to hit a real database, and that the unit and API suites stay in-memory per [`.cursor/rules/tests.mdc`](../.cursor/rules/tests.mdc).
 - Bump `CONSTITUTION_VERSION` (MINOR), set Last Amended, and align [`AGENTS.md`](../AGENTS.md), [`.cursor/rules/engineering.mdc`](../.cursor/rules/engineering.mdc), and `.github/copilot-instructions.md` in the same change, as the governance section requires.
 
-**Rename rather than duplicate the agents.** Keeping nine `taskboard-*` files beside the six existing `speckit-*` files leaves two near-identical sets, which works against the constitution's preference for editing an existing file over creating a new one. Rename [`.cursor/agents/speckit-orchestrator.md`](../.cursor/agents/speckit-orchestrator.md), `speckit-specify.md`, `speckit-plan.md`, `speckit-tasks.md`, `speckit-implement.md`, and `jira-story-reader.md` to their `taskboard-` names and edit them in place. Add only the genuinely new ones: `taskboard-clarify`, `taskboard-analyze`, `taskboard-checklist`, and `taskboard-test`. The skills under `.cursor/skills/` keep their `speckit-` names; only agents are renamed.
+**Rename rather than duplicate the agents.** Keeping nine `taskboard-*` files beside the six existing `speckit-*` files leaves two near-identical sets, which works against the constitution's preference for editing an existing file over creating a new one. Rename [`.cursor/agents/speckit-orchestrator.md`](../.cursor/agents/speckit-orchestrator.md), `speckit-specify.md`, `speckit-plan.md`, `speckit-tasks.md`, `speckit-implement.md`, and `jira-story-reader.md` to their `taskboard-` names and edit them in place. Add only the genuinely new ones: `taskboard-clarify`, `taskboard-analyze`, `taskboard-checklist`, `taskboard-test`, and `taskboard-ci`. The skills under `.cursor/skills/` keep their `speckit-` names; only agents are renamed.
 
 ## Work
 
@@ -26,6 +26,7 @@ The first action of a run is to take `issue_key` from the user. If it is missing
 - `taskboard-tasks` follows the speckit-tasks skill, then `taskboard-analyze` and `taskboard-checklist` run in parallel and the review-quality gate runs.
 - `taskboard-implement` follows the speckit-implement skill, then the after-implement unit-test hook. It does not run the browser.
 - After the implement handoff is ok, `taskboard-test` runs Playwright against the acceptance scenarios and the review-e2e gate aborts on any failure.
+- After review-e2e, `taskboard-ci` ensures Dockerfiles and `.github/workflows/ci.yml` exist and opens a pull request so Actions runs unit tests, compose smoke, and Docker Hub publish on `main`.
 
 ## Agents and skills
 
@@ -41,6 +42,7 @@ Agents live under `.cursor/agents/` with a `taskboard-` name. Do not copy skill 
 - `taskboard-checklist` — [`.cursor/skills/speckit-checklist/SKILL.md`](../.cursor/skills/speckit-checklist/SKILL.md). Read-only.
 - `taskboard-implement` — [`.cursor/skills/speckit-implement/SKILL.md`](../.cursor/skills/speckit-implement/SKILL.md). Stops when unit tests for the touched stacks pass. Does not open a browser.
 - `taskboard-test` — no SpecKit skill. Playwright end-to-end only. Does not edit production code.
+- `taskboard-ci` — no SpecKit skill. Dockerfiles and GitHub Actions only. Opens a PR; does not edit application code.
 - `taskboard-constitution` — [`.cursor/skills/speckit-constitution/SKILL.md`](../.cursor/skills/speckit-constitution/SKILL.md). Prerequisite only, not part of a feature run.
 
 Launch each specialist with the Task tool, `subagent_type` equal to that agent `name`. Wait for it to finish. The prompt is the handoff path plus the fields that specialist needs, nothing else.
@@ -103,6 +105,7 @@ Predecessor required before launch:
 - `taskboard-analyze` and `taskboard-checklist` — both see step `taskboard-tasks` and the same `tasks_file`. The master launches them together and writes the handoff only after both return `ok`.
 - `taskboard-implement` — step `review-quality`, `quality_stamp` exists, `tasks_file` exists.
 - `taskboard-test` — step `taskboard-implement`, every entry in `tests` passed.
+- `taskboard-ci` — step `review-e2e`.
 
 Pass `issue_key` and `brief_path` into specify. Pass `feature_directory` from the handoff into clarify, plan, tasks, analyze, checklist, implement, and test.
 
@@ -129,6 +132,8 @@ flowchart TD
   postImpl[hook_after_implement]
   e2e[taskboard_test]
   gateE2e[gate_review_e2e]
+  ci[taskboard_ci]
+  gateCi[gate_review_ci]
 
   master --> jira --> branchHook --> specify --> gateSpec --> clarify --> gateClarify
   gateClarify --> plan --> gatePlan --> tasks
@@ -136,10 +141,10 @@ flowchart TD
   tasks --> checklist
   analyze --> gateQuality
   checklist --> gateQuality
-  gateQuality --> preImpl --> impl --> postImpl --> gateImpl --> e2e --> gateE2e
+  gateQuality --> preImpl --> impl --> postImpl --> gateImpl --> e2e --> gateE2e --> ci --> gateCi
 ```
 
-Sequential (one specialist, wait, write the handoff, then the next): Jira read, branch hook, specify, clarify, plan, tasks, implement, post-implement hook, Playwright test.
+Sequential (one specialist, wait, write the handoff, then the next): Jira read, branch hook, specify, clarify, plan, tasks, implement, post-implement hook, Playwright test, CI pull request.
 
 Parallel:
 
@@ -161,6 +166,7 @@ Each gate is pass or abort. The master records the decision in `.specify/handoff
 - **review-quality:** analyze reports zero CRITICAL findings (constitution conflicts are CRITICAL). The checklist has no failed requirement items. Both parallel agents return `status: ok`. On pass, the master writes `.specify/quality-gate.json` with the feature directory, a UTC timestamp, and the two agents' verdicts, and records the path as `quality_stamp`. This file is what the before-implement hook checks.
 - **review-implement:** `dotnet test`, `pytest`, `./mvnw -B test`, and `npm test -- --run` pass for every stack the story touches. Unit and API tests only. The handoff records each command and its result.
 - **review-e2e:** `taskboard-test` returns `status: ok`, the Playwright run exits 0, and `e2e_report` exists under the feature directory. Every user-visible acceptance scenario in `spec.md` has a passing test. Any failed or missing scenario aborts. A story with no user-visible scenario may return `skipped` only when the spec lists none; otherwise a skip fails the gate.
+- **review-ci:** `taskboard-ci` returns `status: ok`, a GitHub pull request URL is present, and the Dockerfiles, `docker-compose.yml`, and `.github/workflows/ci.yml` exist.
 
 ## Hooks
 
@@ -192,6 +198,7 @@ Write `e2e-report.md` in the feature directory with one line per scenario, its s
 - Add the hook scripts, `extensions.yml`, and the `handoff.json` gitignore entry.
 - Application edits happen only inside `taskboard-implement`, in `tasks.md` order, tests before behavior.
 - Playwright setup, environment startup, and the browser run happen only inside `taskboard-test`.
+- Dockerfiles, compose, and `.github/workflows/ci.yml` are first-class repo files. `taskboard-ci` opens a pull request so GitHub Actions is the CI gate.
 
 ## Return
 
