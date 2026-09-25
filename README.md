@@ -48,6 +48,7 @@ frontend/           React + Vite single-page board
 database/           schema.sql (source of truth), seed.sql, migrations/
 .github/            Copilot customization: instructions, prompts, agents, skills
 .cursor/            Cursor customization: rules, agents, skills, MCP
+guides/             Step-by-step setup guides (Azure Boards, Cursor MCP)
 usecase.md          Domain, data model, and full API contract
 AGENTS.md           Quick engineering rules for AI agents
 ```
